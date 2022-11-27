@@ -1,0 +1,66 @@
+<html>
+    <head>
+        <title>Temperature Measurement System</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function() { /// Wait till page is loaded
+                $('option[value="{{ data["phoneProvider"] }}"]').attr("selected","selected")
+            }); //// End of Wait till page is loaded
+        </script>
+    </head>
+
+    <body>
+        <div class="container" style="text-align:center;">
+            <div class="page-header">
+                <h1>Team Access Denied</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-4"></div>
+            <div class="col-sm-4">
+                <h3>Edit Text Alert Settings</h3>
+                <p>When the temperature becomes lower or higher than a given threshold,
+                the system will send a text message alert to a phone number of your choosing.
+                You can customize the number, the thresholds, and the messages here.</p>
+                <form action="/settings" method="POST">
+                    <div class="form-group">
+                        <label for="phone">Phone number (digits only):</label>
+                        <input type="number" class="form-control" id="phone" name="phone" required value={{ data['phone'] }}>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone_provider">Select list:</label>
+                        <select class="form-control" id="phone_provider" name="phone_provider">
+                            <option value="att">AT&T</option>
+                            <option value="verizon">Verizon</option>
+                            <option value="tmobile">T-Mobile</option>
+                            <option value="boost">Boost</option>
+                            <option value="cricket">Cricket</option>
+                            <option value="usc">US Cellular</option>
+                        </select>
+                    </div>
+                    <hr/>
+                    <div class="form-group">
+                        <label for="limit_hi">Upper temperature threshold (°C):</label>
+                        <input type="number" id="limit_hi" name="limit_hi" min="10" max="50" value={{ data['alertHigh'] }}>
+                    </div>
+                    <div class="form-group">
+                        <label for="text_hi">Text alert when temperature is too high:</label>
+                        <textarea class="form-control" rows="3" id="text_hi" name="text_hi" maxlength=100>{{ data['textHigh'] }}</textarea>
+                    </div>
+                    <hr/>
+                    <div class="form-group">
+                        <label for="limit_lo">Lower temperature threshold (°C):</label>
+                        <input type="number" id="limit_lo" name="limit_lo" min="10" max="50" value={{ data['alertLow'] }}>
+                    </div>
+                    <div class="form-group">
+                        <label for="text_lo">Text alert when temperature is too low:</label>
+                        <textarea class="form-control" rows="3" id="text_lo" name="text_lo" maxlength=100>{{ data['textLow'] }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">Submit</button>
+                </form>
+            </div>
+            <div class="col-sm-4"></div>
+        </div>
+    </body>
+</html>

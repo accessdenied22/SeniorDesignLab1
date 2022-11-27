@@ -1,0 +1,215 @@
+<html>
+    <head>
+        <title>Temperature Measurement System</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+        <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+        <script type="text/javascript">
+            // Callback that creates and populates a data table,
+            // instantiates the chart, passes in the data and draws it.
+            var data;
+            var celsius = true;
+            var displayOn = false;
+
+            $(document).ready(function() { /// Wait till page is loaded
+                console.log("Loading...");
+                var jqxhr = $.getJSON( "data.json", function(datajson) {
+                  console.log( "data loaded" );
+                  data = datajson;
+                  $("#phone").text(data['phone'] + ", " + data['phoneProvider']);
+                  $("#alertHigh").text(data['alertHigh']);
+                  $("#alertLow").text(data['alertLow']);
+                  $("#textHigh").text(data['textHigh']);
+                  $("#textLow").text(data['textLow']);
+                })
+                  .success(function() {
+                    console.log( "loaded settings" );
+                  })
+                  .error(function() {
+                    console.log( "error loading settings" );
+                  })
+                  .complete(function() {
+                    console.log( "json load complete" );
+                  });
+
+                $("#switch_units_btn").click(function() {
+                    celsius = !celsius;
+                    if(celsius) {
+                        $("#switch_units_btn").text("Switch to °F");
+                        $("#switch_units_btn").removeClass("btn-primary").addClass("btn-danger");
+                    } else {
+                        $("#switch_units_btn").text("Switch to °C");
+                        $("#switch_units_btn").removeClass("btn-danger").addClass("btn-primary");
+                    }
+                });
+                $("#toggle_display_btn").click(function() {
+                    displayOn = !displayOn;
+                    var jqxhr = $.get( "/toggle", function() {
+                      console.log( "toggled display" );
+                    })
+                    .fail(function() {
+                        console.log( "error toggling display" );
+                      });
+                    if(displayOn) {
+                        $("#toggle_display_btn").text("Turn Display Off");
+                        $("#toggle_display_btn").toggleClass("btn-default").toggleClass("btn-success");
+                    } else {
+                        $("#toggle_display_btn").text("Turn Display On");
+                        $("#toggle_display_btn").toggleClass("btn-success").toggleClass("btn-default");
+                    }
+                });
+                setInterval(timingLoad, 1000);
+                function timingLoad() {
+                    console.log("Loading...");
+                    var jqxhr = $.getJSON( "data.json", function(datajson) {
+                      console.log( "data loaded" );
+                      data = datajson;
+                    })
+                      .success(function() {
+                        drawChart();
+                        console.log( "chart drawn" );
+                      })
+                      .error(function() {
+                        console.log( "error drawing chart" );
+                      });
+                }
+
+                function getData() {
+                    var d = [];
+                    var dict = Object.fromEntries(data['temp']);
+                    var now = Math.floor(Date.now() / 1000);
+                    var currTempFound = false;
+                    for (let i = 0; i < 300; i++) {
+                        var timestamp = (now-i).toString();
+                        // var timestampMinus1 = (now-i-1).toString();
+                        var tempVal = null;
+                        if ((timestamp in dict)){ //|| (timestampMinus1 in dict)) {
+                            // var tempVal = dict[timestampMinus1];
+                            // if (timestamp in dict) {
+                            tempVal = dict[timestamp];
+                            // }
+                            if (!celsius) {
+                                tempVal = Math.round(tempVal*(9./5.) + 32);
+                            }
+                            if (!currTempFound && (i==0 || i==1 || i==2)) {
+                               $("#quickInfo").text("Current temperature: "+tempVal+"°");
+                               currTempFound = true;
+                            }
+                        }
+                        d[i] = [i+1, tempVal]
+                    }
+                    if (data['boxOn']==1 && data['sensorConnected']==0) {
+                        $("#quickInfo").text("Temperature sensor disconnected");
+                    }
+                    else if (!currTempFound) {
+                        $("#quickInfo").text("No data available");
+                        var jqxhr = $.get( "/boxOff", function() {
+                          console.log( "box must be off" );
+                        });
+                    }
+                    return d;
+                }
+
+                // Load the Visualization API and the corechart package.
+                google.charts.load('current', {'packages':['corechart']});
+                // Set a callback to run when the Google Visualization API is loaded.
+                google.charts.setOnLoadCallback(drawChart);
+
+                function drawChart() {
+                    var tempTitle = "°C";
+                    var lineColor = '#204d74';
+                    var minDisp = 10;
+                    var maxDisp = 50;
+                    if(celsius==false) {
+                        tempTitle = "°F";
+                        lineColor = '#c9302c';
+                        minDisp = 50;
+                        maxDisp = 122;
+                    }
+
+                    // Create the data table.
+                    var data = new google.visualization.DataTable();
+                    data.addColumn('number', 'Sec');
+                    data.addColumn('number', tempTitle);
+                    data.addRows(getData());
+
+                    // Set chart options
+                    var options = {
+                                    title:'Temperature Measurement System',
+                                    width: "100%",
+                                    height:500,
+                                    vAxis: {
+                                       minValue: minDisp,
+                                       maxValue: maxDisp,
+                                       viewWindow: {min: minDisp, max: maxDisp},
+                                       title: "Temperature"
+                                    },
+                                    hAxis: {
+                                       direction: -1,
+                                       gridlines: {multiple:1},
+                                       minValue: 0,
+                                       maxValue: 300,
+                                       viewWindow: {min: 1, max:300},
+                                       title: "Seconds ago from the current time"
+                                    },
+                                    colors: [lineColor],
+                                    axes: {
+                                      y: {
+                                        0: {side: 'right'}
+                                      }
+                                    }
+                    };
+
+                    // Instantiate and draw our chart, passing in some options.
+                    var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+                    chart.draw(data, options);
+                }
+            }); //// End of Wait till page is loaded
+        </script>
+    </head>
+
+    <body>
+        <div class="container" style="text-align:center;">
+            <div class="page-header">
+                <h1>Team Access Denied</h1>
+            </div>
+        </div>
+        <div class="container">
+            <div style=" height:520px; resize: both; border: 1px solid black; overflow-y: scroll;">
+                <div id="chart_div"></div>
+            </div>
+            <div class="row" style="text-align:center;">
+                <div class="col-sm-4"></div>
+                <div class="col-sm-4">
+                    <div class='alert' style="text-align:center;margin:0px;">
+                        <h3 id="quickInfo"></h3>
+                    </div>
+                </div>
+                <div class="col-sm-4"></div>
+            </div>
+            <div class='alert alert-info' style="text-align:center;">
+                <a id="switch_units_btn" class="btn btn-primary active">Switch to °F</a>
+                <a id="toggle_display_btn" class="btn btn-default active">Turn Display On</a>
+                <a id="edit_settings_btn" class="btn btn-info active" href="/settings">Edit Alert Settings</a>
+            </div>
+            <div class='well' style="text-align:center;">
+                <h4>Current Text Alert Settings</h4>
+                <hr>
+                <div class="row" style="text-align:center;">
+                    <div class="col-sm-4">
+                        <strong>Phone number:</strong>
+                        <h4 id="phone"></h4>
+                    </div>
+                    <div class="col-sm-4">
+                        <strong>Alert at <span id="alertHigh"></span>°C:</strong>
+                        <h4 id="textHigh"></h4>
+                    </div>
+                    <div class="col-sm-4">
+                        <strong>Alert at <span id="alertLow"></span>°C:</strong>
+                        <h4 id="textLow"></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
